@@ -1,27 +1,28 @@
-// src/App.tsx
-import React, { useState } from 'react';
-import { FakeDataProvider, useFakeData } from '../context/FakeDataContext';
+import React, { useEffect, useState } from 'react';
+import {Provider, useDispatch, useSelector} from 'react-redux';
 import styled from 'styled-components';
+import store, { RootState } from './redux/store';
+import { changeMonth, changeFakeData, loadFromLocalStorage } from './redux/fakeDataSlice';
 
 const Button = styled.button`
-    padding: 1rem 3rem;
-    background-color: #f2f2f2;
-    border-radius: 0.5rem;
-    border: 0.25rem solid #f2f2f2;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #333;
-    cursor: pointer;
-    transition: background-color 0.2s;
+  padding: 1rem 3rem;
+  background-color: #f2f2f2;
+  border-radius: 0.5rem;
+  border: 0.25rem solid #f2f2f2;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s;
 
-    &:hover {
-        background-color: #dcd9d9;
-        border-color: #dcd9d9;
-    }
+  &:hover {
+    background-color: #dcd9d9;
+    border-color: #dcd9d9;
+  }
 
-    &:focus {
-        outline: none;
-    }
+  &:focus {
+    outline: none;
+  }
 `;
 
 function uuidv4() {
@@ -37,8 +38,13 @@ type ModalData = {
 };
 
 const AppContent: React.FC = () => {
-  const { month, fakeData, changeMonth, changeFakeData } = useFakeData();
+  const dispatch = useDispatch();
+  const { month, fakeData } = useSelector((state: RootState) => state.fakeData);
   const [modalData, setModalData] = useState<ModalData>({ id: '' });
+
+  useEffect(() => {
+    dispatch(loadFromLocalStorage());
+  }, [dispatch]);
 
   return (
     <div
@@ -61,7 +67,7 @@ const AppContent: React.FC = () => {
         }}
       >
         {Array.from({ length: 12 }, (_, i) => (
-          <Button key={i} onClick={() => changeMonth(i)} style={{ backgroundColor: month === i ? 'aqua' : '' }}>
+          <Button key={i} onClick={() => dispatch(changeMonth(i))} style={{ backgroundColor: month === i ? 'aqua' : '' }}>
             {i + 1}월
           </Button>
         ))}
@@ -97,7 +103,7 @@ const AppContent: React.FC = () => {
           </div>
           <button
             onClick={() => {
-              changeFakeData([
+              const newData = [
                 ...fakeData,
                 {
                   id: uuidv4(),
@@ -106,7 +112,8 @@ const AppContent: React.FC = () => {
                   amount: parseInt((document.getElementById('amount') as HTMLInputElement).value),
                   description: (document.getElementById('description') as HTMLInputElement).value,
                 },
-              ]);
+              ];
+              dispatch(changeFakeData(newData));
               alert('저장되었습니다.');
             }}
           >
@@ -114,8 +121,8 @@ const AppContent: React.FC = () => {
           </button>
         </div>
         {fakeData
-          .filter((data: { date: string | number | Date; }) => new Date(data.date).getMonth() === month)
-          .map((data: { id: string; date: string; item: string; amount: number; description: string }) => (
+          .filter((data) => new Date(data.date).getMonth() === month)
+          .map((data) => (
             <div
               key={data.id}
               style={{
@@ -176,25 +183,25 @@ const AppContent: React.FC = () => {
             <div>
               <div>
                 <label> 날짜 </label>
-                <input type="date" defaultValue={fakeData.find((data: { id: string; }) => data.id === modalData.id)?.date} id="modifyDate" />
+                <input type="date" defaultValue={fakeData.find((data) => data.id === modalData.id)?.date} id="modifyDate" />
               </div>
               <div>
                 <label> 항목 </label>
-                <input type="text" defaultValue={fakeData.find((data: { id: string; }) => data.id === modalData.id)?.item} id="modifyItem" />
+                <input type="text" defaultValue={fakeData.find((data) => data.id === modalData.id)?.item} id="modifyItem" />
               </div>
               <div>
                 <label> 금액 </label>
-                <input type="number" defaultValue={fakeData.find((data: { id: string; }) => data.id === modalData.id)?.amount} id="modifyAmount" />
+                <input type="number" defaultValue={fakeData.find((data) => data.id === modalData.id)?.amount} id="modifyAmount" />
               </div>
               <div>
                 <label> 내용 </label>
-                <input type="text" defaultValue={fakeData.find((data: { id: string; }) => data.id === modalData.id)?.description} id="modifyDescription" />
+                <input type="text" defaultValue={fakeData.find((data) => data.id === modalData.id)?.description} id="modifyDescription" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button
                 onClick={() => {
-                  const modifiedData = fakeData.map((data: { id: string; }) => {
+                  const modifiedData = fakeData.map((data) => {
                     if (data.id === modalData.id) {
                       return {
                         id: data.id,
@@ -206,7 +213,7 @@ const AppContent: React.FC = () => {
                     }
                     return data;
                   });
-                  changeFakeData(modifiedData);
+                  dispatch(changeFakeData(modifiedData));
                   setModalData({ id: '' });
                 }}
               >
@@ -214,7 +221,8 @@ const AppContent: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  changeFakeData(fakeData.filter((data: ModalData) => data.id !== modalData.id));
+                  const newData = fakeData.filter((data) => data.id !== modalData.id);
+                  dispatch(changeFakeData(newData));
                   setModalData({ id: '' });
                 }}
               >
@@ -230,9 +238,9 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => (
-  <FakeDataProvider>
+  <Provider store={store}>
     <AppContent />
-  </FakeDataProvider>
+  </Provider>
 );
 
 export default App;

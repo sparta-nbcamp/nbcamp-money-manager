@@ -1,28 +1,15 @@
-// src/context/FakeDataContext.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 type FakeData = { id: string; date: string; item: string; amount: number; description: string }[];
 
-interface FakeDataContextType {
+interface FakeDataState {
   month: number;
   fakeData: FakeData;
-  changeMonth: (month: number) => void;
-  changeFakeData: (fakeData: FakeData) => void;
 }
 
-const FakeDataContext = createContext<FakeDataContextType | undefined>(undefined);
-
-export const useFakeData = () => {
-  const context = useContext(FakeDataContext);
-  if (!context) {
-    throw new Error('useFakeData must be used within a FakeDataProvider');
-  }
-  return context;
-};
-
-export const FakeDataProvider: React.FC = ({ children } : { children: React.ReactNode }) => {
-  const [month, setMonth] = useState(0);
-  const [fakeData, setFakeData] = useState<FakeData>([
+const initialState: FakeDataState = {
+  month: 0,
+  fakeData: [
     {
       id: '25600f72-56b4-41a7-a9c2-47358580e2f8',
       date: '2024-01-05',
@@ -73,30 +60,34 @@ export const FakeDataProvider: React.FC = ({ children } : { children: React.Reac
       description:
         '자율주행차량 운전주행모드 자동 전환용 인식률 90% 이상의 다중 센서 기반 운전자 상태 인식 및 상황 인식 원천 기술 개발',
     },
-  ]);
-
-  useEffect(() => {
-    const month = localStorage.getItem('month');
-    if (month) {
-      setMonth(parseInt(month));
-    }
-    const fakeData = localStorage.getItem('fakeData');
-    if (fakeData) setFakeData(JSON.parse(fakeData));
-  }, []);
-
-  const changeMonth = (month: number) => {
-    setMonth(month);
-    localStorage.setItem('month', month.toString());
-  };
-
-  const changeFakeData = (fakeData: FakeData) => {
-    setFakeData(fakeData);
-    localStorage.setItem('fakeData', JSON.stringify(fakeData));
-  };
-
-  return (
-    <FakeDataContext.Provider value={{ month, fakeData, changeMonth, changeFakeData }}>
-      {children}
-    </FakeDataContext.Provider>
-  );
+  ],
 };
+
+const fakeDataSlice = createSlice({
+  name: 'fakeData',
+  initialState,
+  reducers: {
+    changeMonth: (state, action: PayloadAction<number>) => {
+      state.month = action.payload;
+      localStorage.setItem('month', action.payload.toString());
+    },
+    changeFakeData: (state, action: PayloadAction<FakeData>) => {
+      state.fakeData = action.payload;
+      localStorage.setItem('fakeData', JSON.stringify(action.payload));
+    },
+    loadFromLocalStorage: (state) => {
+      const month = localStorage.getItem('month');
+      if (month) {
+        state.month = parseInt(month);
+      }
+      const fakeData = localStorage.getItem('fakeData');
+      if (fakeData) {
+        state.fakeData = JSON.parse(fakeData);
+      }
+    },
+  },
+});
+
+export const { changeMonth, changeFakeData, loadFromLocalStorage } = fakeDataSlice.actions;
+
+export default fakeDataSlice.reducer;
